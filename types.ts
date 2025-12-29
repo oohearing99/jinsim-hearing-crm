@@ -225,7 +225,7 @@ export interface DetailedSoundField {
 
 export interface DetailedVerification {
   rem: { performed: boolean | null; formula?: string; target_match?: string; mpo_safe: boolean | null; summary: string | null };
-  eaa: { performed: boolean | null; pass: boolean | null; summary: string | null };
+  eaa: { performed: boolean | null; pass: boolean | null; ospl90_db?: number | null; summary: string | null };
 }
 
 // 2차 피팅/검증 체크리스트 인터페이스
