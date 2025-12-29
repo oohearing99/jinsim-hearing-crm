@@ -892,10 +892,14 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
       if (!prev.results_detailed.pure_tone) {
         prev.results_detailed.pure_tone = {
           performed: false,
+          test_date: null,
+          transducer: null,
           ac_dbhl: { right: {}, left: {} },
           sf_dbhl: { right: {}, left: {} },
           bc_dbhl: { right: {}, left: {} },
           nr: { right: [], left: [], sf_right: [], sf_left: [] },
+          masking_used: null,
+          notes: null,
           derived: { pta_right: null, pta_left: null, pta_sf_right: null, pta_sf_left: null }
         };
       }
@@ -1023,10 +1027,14 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
                      // 기본값 설정
                      const defaultData = {
                        performed: false,
+                       test_date: null,
+                       transducer: null,
                        ac_dbhl: { right: {}, left: {} },
                        sf_dbhl: { right: {}, left: {} },
                        bc_dbhl: { right: {}, left: {} },
                        nr: { right: [], left: [], sf_right: [], sf_left: [] },
+                       masking_used: null,
+                       notes: null,
                        derived: { pta_right: null, pta_left: null, pta_sf_right: null, pta_sf_left: null }
                      };
 
@@ -4698,10 +4706,14 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
                                  onChange={(d) => updateSession(prev => ({...prev, results_detailed: {...prev.results_detailed, speech: d}}))}
                                  pureToneData={session.results_detailed?.pure_tone || {
                                    performed: false,
+                                   test_date: null,
+                                   transducer: null,
                                    ac_dbhl: { right: {}, left: {} },
                                    sf_dbhl: { right: {}, left: {} },
                                    bc_dbhl: { right: {}, left: {} },
                                    nr: { right: [], left: [], sf_right: [], sf_left: [] },
+                                   masking_used: null,
+                                   notes: null,
                                    derived: { pta_right: null, pta_left: null, pta_sf_right: null, pta_sf_left: null }
                                  }}
                                />

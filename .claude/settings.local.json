@@ -36,7 +36,12 @@
       "Bash(powershell -ExecutionPolicy Bypass -Command \"cd ''c:\\\\Users\\\\User\\\\Downloads\\\\jinsim-hearing-crm-backup \\(2\\)\\\\hearing-aid-sim''; & ''.\\\\.venv\\\\Scripts\\\\python.exe'' -m streamlit run app/main.py --server.port 8501 --server.headless true\")",
       "Bash(git init:*)",
       "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: 보청기 CRM 시스템\n\n- Next.js 기반 CRM 앱 \\(고객 관리, 방문 기록, 청력 검사\\)\n- Streamlit 기반 보청기 만족도 예측 시뮬레이터\n- 블로그 포스팅 기능 \\(센터/고객 정보, 이미지 관리\\)\n- Word/PDF 리포트 생성 기능\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
