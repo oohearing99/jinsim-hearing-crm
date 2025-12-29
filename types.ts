@@ -524,6 +524,12 @@ export interface PureToneTestData extends BaseRecord {
     lt_bc?: number | null;
     rt_sf?: number | null;
     lt_sf?: number | null;
+    rt_ac_nr?: boolean;
+    lt_ac_nr?: boolean;
+    rt_bc_nr?: boolean;
+    lt_bc_nr?: boolean;
+    rt_sf_nr?: boolean;
+    lt_sf_nr?: boolean;
   }>;
 }
 
