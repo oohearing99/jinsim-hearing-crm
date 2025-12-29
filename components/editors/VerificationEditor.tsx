@@ -59,7 +59,7 @@ const VerificationEditor: React.FC<Props> = ({ data, onChange }) => {
                 <input 
                   type="checkbox" 
                   className="w-4 h-4 rounded text-emerald-600"
-                  checked={data.rem.mpo_safe}
+                  checked={data.rem.mpo_safe ?? false}
                   onChange={e => updateRem('mpo_safe', e.target.checked)}
                 />
                 <span className="text-xs font-bold text-slate-600">MPO 안전 확인됨</span>
