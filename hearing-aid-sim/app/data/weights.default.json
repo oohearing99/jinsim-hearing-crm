@@ -1,0 +1,119 @@
+{
+  "description": "보청기 만족도 예측 규칙 기반 가중치 설정 (현실적 조정)",
+  "version": "2.0.0",
+  "updated_at": "2024-12-29",
+
+  "base_score": 45,
+
+  "loss_level_weights": {
+    "description": "청력 손실 수준별 가중치 (심한 손실일수록 만족도 감소)",
+    "mild": 8,
+    "moderate": 3,
+    "severe": -3,
+    "profound": -8
+  },
+
+  "speech_score_weights": {
+    "description": "어음명료도 구간별 가중치 (낮은 명료도는 큰 감점)",
+    "ranges": [
+      {"min": 0, "max": 30, "weight": -20},
+      {"min": 31, "max": 50, "weight": -10},
+      {"min": 51, "max": 70, "weight": 0},
+      {"min": 71, "max": 85, "weight": 8},
+      {"min": 86, "max": 100, "weight": 12}
+    ]
+  },
+
+  "lifestyle_weights": {
+    "description": "생활 환경별 가중치 (소음 환경은 만족도 감소)",
+    "quiet": 8,
+    "mixed": 0,
+    "noisy": -10
+  },
+
+  "experience_weight": {
+    "description": "보청기 사용 경험 (첫 착용자는 적응 어려움)",
+    "has_experience": 10,
+    "no_experience": -5
+  },
+
+  "tinnitus_weight": {
+    "description": "이명 증상 (이명이 있으면 만족도 감소)",
+    "has_tinnitus": -8,
+    "no_tinnitus": 0
+  },
+
+  "asymmetry_penalty": {
+    "description": "좌우 청력 비대칭 페널티 (비대칭 클수록 감점)",
+    "threshold_db": 10,
+    "penalty_per_10db": -5,
+    "max_penalty": -15
+  },
+
+  "budget_weights": {
+    "description": "예산 범위 (저예산은 기능 제한으로 감점)",
+    "low": -8,
+    "mid": 0,
+    "high": 8
+  },
+
+  "type_mismatch_penalties": {
+    "description": "청력 손실 수준에 부적합한 보청기 형태 선택 시 페널티",
+    "mild": {
+      "BTE": -3,
+      "RIC": 3,
+      "ITE": 2,
+      "CIC": 0
+    },
+    "moderate": {
+      "BTE": 2,
+      "RIC": 5,
+      "ITE": 0,
+      "CIC": -8
+    },
+    "severe": {
+      "BTE": 5,
+      "RIC": 2,
+      "ITE": -5,
+      "CIC": -15
+    },
+    "profound": {
+      "BTE": 8,
+      "RIC": 3,
+      "ITE": -10,
+      "CIC": -20
+    }
+  },
+
+  "age_adjustment": {
+    "description": "연령대별 조정 (고령일수록 적응 어려움)",
+    "ranges": [
+      {"min": 10, "max": 40, "weight": 5},
+      {"min": 41, "max": 60, "weight": 3},
+      {"min": 61, "max": 75, "weight": 0},
+      {"min": 76, "max": 110, "weight": -5}
+    ]
+  },
+
+  "binaural": {
+    "description": "양측 난청인데 단측 착용 시 페널티 계산",
+    "pta_need_threshold_db": 25,
+    "base_unilateral_penalty": 15,
+    "max_unilateral_penalty": 25,
+    "asymmetry_relief_start_db": 15,
+    "asymmetry_relief_full_db": 35,
+    "noisy_env_need_bonus": 0.2,
+    "mixed_env_need_bonus": 0.1,
+    "first_time_need_bonus": 0.1,
+    "low_budget_penalty_relief": 0.2
+  },
+
+  "notes": [
+    "v2.0: 현실적인 만족도 예측을 위해 가중치 조정",
+    "기본 점수 50→45로 하향",
+    "첫 착용자 페널티 추가 (-5)",
+    "고령층(76세 이상) 적응 어려움 반영 (-5)",
+    "심한 난청일수록 만족도 하향 조정",
+    "평균 예측 만족도: 55-70점 범위 목표"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(curl:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(pkill:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(set PORT=3005)",
+      "Bash(npx kill-port:*)",
+      "Bash(wc:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"c:\\\\Users\\\\User\\\\Downloads\\\\compress.ps1\")",
+      "Bash(timeout:*)",
+      "Bash(python -m venv:*)",
+      "Bash(.venvScriptsactivate)",
+      "Bash(pip install:*)",
+      "Bash(.venv/Scripts/pip install:*)",
+      "Bash(.venv/Scripts/streamlit run app/main.py)",
+      "Bash(set:*)",
+      "Bash(.venv/Scripts/streamlit:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(.venvScriptsstreamlit run app/main.py --server.port 8501)",
+      "Bash(\".venv\\\\Scripts\\\\streamlit.exe\" run app/main.py --server.port 8501)",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"cd ''c:\\\\Users\\\\User\\\\Downloads\\\\jinsim-hearing-crm-backup \\(2\\)\\\\hearing-aid-sim''; & ''.\\\\.venv\\\\Scripts\\\\python.exe'' -m streamlit run app/main.py --server.port 8501\")",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"cd ''c:\\\\Users\\\\User\\\\Downloads\\\\jinsim-hearing-crm-backup \\(2\\)\\\\hearing-aid-sim''; & ''.\\\\.venv\\\\Scripts\\\\python.exe'' -m streamlit run app/main.py --server.port 8501 --server.headless true\")",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

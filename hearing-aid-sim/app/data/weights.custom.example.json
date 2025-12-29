@@ -1,0 +1,103 @@
+{
+  "description": "커스텀 가중치 설정 예시 - 복사하여 weights.custom.json으로 사용하세요",
+  "version": "1.0.0",
+  "updated_at": "2024-01-01",
+
+  "base_score": 50,
+
+  "loss_level_weights": {
+    "description": "청력 손실 수준별 기본 만족도",
+    "mild": 5,
+    "moderate": 10,
+    "severe": 15,
+    "profound": 12
+  },
+
+  "speech_score_weights": {
+    "description": "어음명료도 구간별 가중치",
+    "ranges": [
+      {"min": 0, "max": 30, "weight": -15},
+      {"min": 31, "max": 50, "weight": -5},
+      {"min": 51, "max": 70, "weight": 5},
+      {"min": 71, "max": 85, "weight": 10},
+      {"min": 86, "max": 100, "weight": 15}
+    ]
+  },
+
+  "lifestyle_weights": {
+    "description": "생활 환경별 가중치",
+    "quiet": 10,
+    "mixed": 5,
+    "noisy": -5
+  },
+
+  "experience_weight": {
+    "description": "보청기 사용 경험",
+    "has_experience": 8,
+    "no_experience": 0
+  },
+
+  "tinnitus_weight": {
+    "description": "이명 증상",
+    "has_tinnitus": -5,
+    "no_tinnitus": 0
+  },
+
+  "asymmetry_penalty": {
+    "description": "좌우 비대칭 페널티",
+    "threshold_db": 15,
+    "penalty_per_10db": -3,
+    "max_penalty": -12
+  },
+
+  "budget_weights": {
+    "description": "예산 범위",
+    "low": -5,
+    "mid": 5,
+    "high": 12
+  },
+
+  "type_mismatch_penalties": {
+    "description": "보청기 형태 적합성",
+    "mild": {
+      "BTE": 0,
+      "RIC": 5,
+      "ITE": 3,
+      "CIC": 2
+    },
+    "moderate": {
+      "BTE": 5,
+      "RIC": 8,
+      "ITE": 3,
+      "CIC": -5
+    },
+    "severe": {
+      "BTE": 10,
+      "RIC": 5,
+      "ITE": -3,
+      "CIC": -10
+    },
+    "profound": {
+      "BTE": 15,
+      "RIC": 8,
+      "ITE": -8,
+      "CIC": -15
+    }
+  },
+
+  "age_adjustment": {
+    "description": "연령대별 적응력 및 기대치 조정",
+    "ranges": [
+      {"min": 10, "max": 40, "weight": 3},
+      {"min": 41, "max": 60, "weight": 5},
+      {"min": 61, "max": 75, "weight": 8},
+      {"min": 76, "max": 110, "weight": 5}
+    ]
+  },
+
+  "notes": [
+    "이 파일은 예시입니다. weights.custom.json으로 복사하여 수정하세요.",
+    "센터별, 제조사별로 다른 가중치 파일을 만들 수 있습니다.",
+    "변경 후 Streamlit을 재시작하세요."
+  ]
+}
