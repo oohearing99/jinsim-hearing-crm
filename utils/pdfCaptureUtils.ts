@@ -146,6 +146,7 @@ const convertPDFToImages = async (
 
   // Worker 설정
   if (typeof window !== 'undefined') {
+    // @ts-ignore - worker module type
     const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
     pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(
       new Blob([pdfjsWorker], { type: 'application/javascript' })
@@ -170,6 +171,7 @@ const convertPDFToImages = async (
     canvas.width = viewport.width;
 
     // PDF 페이지를 Canvas에 렌더링
+    // @ts-ignore - render parameters type mismatch
     await page.render({
       canvasContext: context,
       viewport: viewport,

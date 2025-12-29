@@ -201,7 +201,7 @@ export const classifyHearingLoss = (
   }
 
   // 난청 정도 분류
-  let severity: typeof classifyHearingLoss extends (...args: any) => infer R ? R['severity'] : never;
+  let severity: 'NORMAL' | 'SLIGHT' | 'MILD' | 'MODERATE' | 'MODERATELY_SEVERE' | 'SEVERE' | 'PROFOUND';
   let severityLabel: string;
 
   if (pta <= 15) {
@@ -229,7 +229,7 @@ export const classifyHearingLoss = (
 
   // 난청 유형 분류
   const abgResult = calculateABG(acThresholds, bcThresholds);
-  let type: typeof classifyHearingLoss extends (...args: any) => infer R ? R['type'] : never;
+  let type: 'NORMAL' | 'CONDUCTIVE' | 'SENSORINEURAL' | 'MIXED' | 'UNKNOWN';
   let typeLabel: string;
   let description: string;
 
