@@ -1043,6 +1043,8 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
                      // 데이터 구조 검증 및 병합
                      return {
                        performed: ptData.performed ?? false,
+                       test_date: ptData.test_date ?? null,
+                       transducer: ptData.transducer ?? null,
                        ac_dbhl: {
                          right: ptData.ac_dbhl?.right ?? {},
                          left: ptData.ac_dbhl?.left ?? {}
@@ -1061,6 +1063,8 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
                          sf_right: ptData.nr?.sf_right ?? [],
                          sf_left: ptData.nr?.sf_left ?? []
                        },
+                       masking_used: ptData.masking_used ?? null,
+                       notes: ptData.notes ?? null,
                        derived: {
                          pta_right: ptData.derived?.pta_right ?? null,
                          pta_left: ptData.derived?.pta_left ?? null,
