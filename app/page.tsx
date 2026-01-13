@@ -9,6 +9,7 @@ import VisitManager, { VisitManagerHandle } from '@/components/VisitManager';
 import { Search, User, ClipboardList, UserCheck, MapPin, X, FileSpreadsheet, Settings, CheckCircle2, AlertCircle, Download, Upload, Database, Camera, FileEdit } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { downloadBackup, validateBackupFile, restoreBackup, getBackupStats, saveLastBackupTime, shouldRemindBackup } from '@/utils/backupUtils';
+import { checkBlogImageSize } from '@/utils/captureUtils';
 
 export default function Home() {
   const [view, setView] = useState<AppState>(AppState.SEARCH);
@@ -677,7 +678,7 @@ export default function Home() {
               const blogUrl = selectedVisit && selectedCustomer
                 ? `/blog-post?visitId=${selectedVisit.id}&customerId=${selectedCustomer.id}`
                 : '/blog-post';
-              window.open(blogUrl, '_blank', 'width=900,height=800,scrollbars=yes,resizable=yes');
+              window.open(blogUrl, 'jinsim-blog-post', 'width=900,height=800,scrollbars=yes,resizable=yes');
             }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-all group"
             title="블로그 포스팅 작성"
@@ -915,6 +916,10 @@ export default function Home() {
             setCapturedImage(imageData);
             setShowImageDestinationModal(true);
           }}
+          onSizeCheck={(width, height) => {
+            const result = checkBlogImageSize(width, height);
+            showToast(result.message);
+          }}
         />
       )}
 
@@ -956,9 +961,10 @@ export default function Home() {
 }
 
 // 화면 캡처 오버레이 컴포넌트
-function ScreenCaptureOverlay({ onClose, onCapture }: {
+function ScreenCaptureOverlay({ onClose, onCapture, onSizeCheck }: {
   onClose: () => void;
   onCapture: (imageData: string) => void;
+  onSizeCheck?: (width: number, height: number) => void;
 }) {
   const [isSelecting, setIsSelecting] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -1026,6 +1032,12 @@ function ScreenCaptureOverlay({ onClose, onCapture }: {
       });
 
       const imageData = canvas.toDataURL('image/png');
+
+      // 이미지 크기 체크 콜백 호출 (scale 2를 적용한 실제 크기)
+      if (onSizeCheck) {
+        onSizeCheck(canvas.width, canvas.height);
+      }
+
       onCapture(imageData);
     } catch (error) {
       console.error('Capture error:', error);
@@ -1040,6 +1052,17 @@ function ScreenCaptureOverlay({ onClose, onCapture }: {
     width: Math.abs(currentPos.x - startPos.x),
     height: Math.abs(currentPos.y - startPos.y),
   };
+
+  // 실시간 크기 체크 (scale 2 적용된 크기 기준)
+  const scaledWidth = selectionStyle.width * 2;
+  const scaledHeight = selectionStyle.height * 2;
+  const isLandscapeOrSquare = scaledWidth >= scaledHeight;
+  const isOptimalSize = isLandscapeOrSquare
+    ? scaledWidth >= 860  // 가로형: 860px 이상
+    : scaledWidth >= 600; // 세로형: 600px 이상
+
+  // 적정 크기면 녹색, 아니면 파란색
+  const selectionColor = isOptimalSize ? 'green' : 'blue';
 
   return (
     <div
@@ -1060,11 +1083,18 @@ function ScreenCaptureOverlay({ onClose, onCapture }: {
       {/* 선택 영역 표시 */}
       {isSelecting && (
         <div
-          className="absolute border-2 border-blue-500 bg-blue-500/20 pointer-events-none"
+          className={`absolute border-2 pointer-events-none ${
+            isOptimalSize
+              ? 'border-green-500 bg-green-500/20'
+              : 'border-blue-500 bg-blue-500/20'
+          }`}
           style={selectionStyle}
         >
-          <div className="absolute -top-6 left-0 bg-blue-500 text-white px-2 py-1 rounded text-xs font-bold">
+          <div className={`absolute -top-6 left-0 text-white px-2 py-1 rounded text-xs font-bold ${
+            isOptimalSize ? 'bg-green-500' : 'bg-blue-500'
+          }`}>
             {Math.round(selectionStyle.width)} × {Math.round(selectionStyle.height)}
+            {isOptimalSize && ' ✓'}
           </div>
         </div>
       )}

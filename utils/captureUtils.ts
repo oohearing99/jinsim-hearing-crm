@@ -1,6 +1,55 @@
 // UI 캡쳐 유틸리티 (네이버 블로그 포스팅용)
 import html2canvas from 'html2canvas';
 
+/**
+ * 네이버 블로그 포스팅 권장 이미지 크기
+ * - 가로형: 860px 이상 (블로그 본문 최대 너비)
+ * - 세로형: 세로가 가로보다 길 때, 가로 최소 600px 이상
+ */
+export interface ImageSizeCheckResult {
+  isOptimal: boolean;
+  width: number;
+  height: number;
+  orientation: 'landscape' | 'portrait' | 'square';
+  message: string;
+}
+
+/**
+ * 이미지 크기가 네이버 블로그 포스팅에 적합한지 체크
+ */
+export const checkBlogImageSize = (width: number, height: number): ImageSizeCheckResult => {
+  const orientation = width > height ? 'landscape' : width < height ? 'portrait' : 'square';
+
+  let isOptimal = false;
+  let message = '';
+
+  if (orientation === 'landscape' || orientation === 'square') {
+    // 가로형/정사각형: 가로 860px 이상 권장
+    if (width >= 860) {
+      isOptimal = true;
+      message = '포스팅 이미지로 적당한 크기입니다!';
+    } else {
+      message = `가로 크기가 작습니다. (현재: ${width}px, 권장: 860px 이상)`;
+    }
+  } else {
+    // 세로형: 가로 600px 이상 권장
+    if (width >= 600) {
+      isOptimal = true;
+      message = '포스팅 이미지로 적당한 크기입니다!';
+    } else {
+      message = `가로 크기가 작습니다. (현재: ${width}px, 권장: 600px 이상)`;
+    }
+  }
+
+  return {
+    isOptimal,
+    width,
+    height,
+    orientation,
+    message,
+  };
+};
+
 export interface CaptureSection {
   id: string;
   name: string;
@@ -191,12 +240,13 @@ export const captureElementAsBlob = async (
 
 /**
  * DOM 요소를 캡쳐해서 JPG 파일로 다운로드
+ * @returns 이미지 크기 체크 결과
  */
 export const captureElementAsJpg = async (
   element: HTMLElement,
   filename: string,
   quality: number = 0.95
-): Promise<void> => {
+): Promise<ImageSizeCheckResult | null> => {
   try {
     // 요소에 임시 padding 추가하여 텍스트 잘림 방지
     const originalPadding = element.style.padding;
@@ -215,26 +265,35 @@ export const captureElementAsJpg = async (
     // 원래 padding 복원
     element.style.padding = originalPadding;
 
-    // Canvas를 JPG로 변환
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          console.error('Failed to create blob');
-          return;
-        }
+    // 이미지 크기 체크 (scale 3을 적용한 실제 크기)
+    const sizeCheckResult = checkBlogImageSize(canvas.width, canvas.height);
+    console.log('[Capture] 이미지 크기 체크:', sizeCheckResult);
 
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      },
-      'image/jpeg',
-      quality
-    );
+    // Canvas를 JPG로 변환
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob: Blob | null) => {
+          if (!blob) {
+            console.error('Failed to create blob');
+            resolve(null);
+            return;
+          }
+
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          resolve(sizeCheckResult);
+        },
+        'image/jpeg',
+        quality
+      );
+    });
   } catch (error) {
     console.error('Capture error:', error);
     throw error;
