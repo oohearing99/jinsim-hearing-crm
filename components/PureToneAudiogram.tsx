@@ -1,10 +1,13 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Visit, Customer, PureToneTestData, DetailedPureTone } from '../types';
 import { FREQUENCIES, BRAND_ID } from '../constants';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Save, Activity, Keyboard, CheckCircle2, AlertCircle } from 'lucide-react';
 import { calculatePTA6, checkDisabilityEligibility } from '../utils/hearingUtils';
+import { clickToEntry, type AudiogramGeometry } from '../utils/audiogramMapping';
+
+const CHART_MARGIN = { top: 30, right: 40, left: 30, bottom: 50 };
 
 interface Props {
   visit: Visit;
@@ -157,6 +160,11 @@ const PureToneAudiogram: React.FC<Props> = ({ visit, customer, onSave, onDirtyCh
     };
   });
 
+  const [activeEar, setActiveEar] = useState<'right' | 'left'>('right');
+  const [activeMode, setActiveMode] = useState<'AC' | 'BC' | 'SF'>('AC');
+  const chartWrapRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<{ x: number; y: number; freq: number; db: number } | null>(null);
+
   const chartData = useMemo(() => {
     return FREQUENCIES.map(f => ({
       frequency: f,
@@ -293,6 +301,59 @@ const PureToneAudiogram: React.FC<Props> = ({ visit, customer, onSave, onDirtyCh
     }
   }, [data, visit.id]);
 
+  const getGeometry = (): AudiogramGeometry | null => {
+    const el = chartWrapRef.current;
+    if (!el) return null;
+    const w = el.clientWidth;
+    const h = el.clientHeight;
+    return {
+      frequencies: FREQUENCIES.map(f => parseInt(f, 10)),
+      xStart: CHART_MARGIN.left,
+      xEnd: w - CHART_MARGIN.right,
+      yStart: CHART_MARGIN.top,
+      yEnd: h - CHART_MARGIN.bottom,
+      dbMin: -10,
+      dbMax: 120,
+      dbStep: 5,
+    };
+  };
+
+  const fieldFor = (ear: 'right' | 'left', mode: 'AC' | 'BC' | 'SF'): string => {
+    const prefix = ear === 'right' ? 'rt' : 'lt';
+    const suffix = mode === 'AC' ? 'ac' : mode === 'BC' ? 'bc' : 'sf';
+    return `${prefix}_${suffix}`;
+  };
+
+  const handleChartClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const geom = getGeometry();
+    const el = chartWrapRef.current;
+    if (!geom || !el) return;
+    const r = el.getBoundingClientRect();
+    const entry = clickToEntry({ x: e.clientX - r.left, y: e.clientY - r.top }, geom);
+    if (!entry) return;
+    const field = fieldFor(activeEar, activeMode);
+    const freqKey = String(entry.freq);
+    setData(prev => ({
+      ...prev,
+      frequencies: {
+        ...prev.frequencies,
+        [freqKey]: { ...(prev.frequencies[freqKey] || {}), [field]: entry.db },
+      },
+    }));
+    onDirtyChange(true);
+  };
+
+  const handleChartMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const geom = getGeometry();
+    const el = chartWrapRef.current;
+    if (!geom || !el) { setHover(null); return; }
+    const r = el.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    const entry = clickToEntry({ x, y }, geom);
+    setHover(entry ? { x, y, freq: entry.freq, db: entry.db } : null);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-10 pb-16">
       <div className="flex justify-between items-center border-b-4 border-orange-600 pb-4">
@@ -308,7 +369,42 @@ const PureToneAudiogram: React.FC<Props> = ({ visit, customer, onSave, onDirtyCh
 
       {/* 순음검사 청력도 */}
       <div data-capture="pure-tone-audiogram" className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-xl">
-        <div className="w-full" style={{ height: '600px', minHeight: '600px' }}>
+        <div className="flex flex-wrap gap-3 mb-3 text-sm">
+          <div className="flex gap-1" role="radiogroup" aria-label="귀 선택">
+            {(['right', 'left'] as const).map(e => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => setActiveEar(e)}
+                aria-pressed={activeEar === e}
+                className={`px-3 py-1 rounded-lg font-bold ${activeEar === e ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'}`}
+              >
+                {e === 'right' ? '우측 (O)' : '좌측 (X)'}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1" role="radiogroup" aria-label="검사 종류">
+            {(['AC', 'BC', 'SF'] as const).map(m => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setActiveMode(m)}
+                aria-pressed={activeMode === m}
+                className={`px-3 py-1 rounded-lg font-bold ${activeMode === m ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-700'}`}
+              >
+                {m === 'AC' ? '기도' : m === 'BC' ? '골도' : '음장'}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div
+          ref={chartWrapRef}
+          onClick={handleChartClick}
+          onMouseMove={handleChartMove}
+          onMouseLeave={() => setHover(null)}
+          className="w-full relative cursor-crosshair"
+          style={{ height: '600px', minHeight: '600px' }}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 30, right: 40, left: 30, bottom: 50 }}>
               <CartesianGrid strokeDasharray="1 1" stroke="#f1f5f9" />
@@ -324,6 +420,15 @@ const PureToneAudiogram: React.FC<Props> = ({ visit, customer, onSave, onDirtyCh
               <Line type="monotone" dataKey="lt_sf" stroke="#3b82f6" name="Lt SF (A)" strokeWidth={3} dot={<RenderCustomA stroke="#3b82f6" />} connectNulls />
             </LineChart>
           </ResponsiveContainer>
+          {hover && (
+            <>
+              <div className="absolute pointer-events-none border-l border-dashed border-slate-400" style={{ left: hover.x, top: 0, bottom: 0 }} />
+              <div className="absolute pointer-events-none border-t border-dashed border-slate-400" style={{ top: hover.y, left: 0, right: 0 }} />
+              <div className="absolute pointer-events-none text-xs font-bold text-slate-700 bg-white px-1 rounded shadow" style={{ left: hover.x + 8, top: hover.y - 20 }}>
+                {hover.freq} Hz / {hover.db} dB
+              </div>
+            </>
+          )}
         </div>
       </div>
 
