@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import PureToneEditor from './editors/PureToneEditor';
 import SpeechEditor from './editors/SpeechEditor';
 import TestSummaryCards from './TestSummaryCards';
+import { TopPriorityPanel } from './ha/TopPriorityPanel';
 import { FREQUENCIES } from '../constants';
 
 // 이경검사 체크리스트 항목 정의
@@ -953,6 +954,18 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
 
   const missingRequired = template.filter(item => item.required && session.checklist[item.key]?.status !== 'DONE');
 
+  const priorityItems = useMemo(() =>
+    template.map((item, idx) => ({
+      id: item.key,
+      stage,
+      priority: (item.required ? 0 : 1000) + idx,
+      status: (session.checklist[item.key]?.status ?? 'PENDING') as 'PENDING' | 'DONE' | 'SKIPPED',
+      title: item.label,
+      description: item.section,
+    })),
+    [template, session.checklist, stage]
+  );
+
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-32">
       <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl" data-capture="visit-summary">
@@ -987,6 +1000,26 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
               onNavigateToTab={onNavigateToTab || (() => {})}
             />
 
+            <TopPriorityPanel
+              items={priorityItems}
+              stage={stage}
+              limit={5}
+              onToggle={(id) => {
+                updateSession(prev => ({
+                  ...prev,
+                  checklist: {
+                    ...prev.checklist,
+                    [id]: { ...prev.checklist[id], status: 'DONE' }
+                  }
+                }));
+              }}
+            />
+
+            <details className="mt-6 group" open>
+              <summary className="cursor-pointer text-sm font-semibold text-slate-600 hover:text-slate-900 py-2">
+                전체 체크항목 보기 ({template.length}개)
+              </summary>
+              <div className="mt-3">
             <div className="space-y-6">
                {['문진/상담', '귀/중이', '청각검사', '피팅/검증', '기기점검', '교육', '계획', '조정', '결과평가'].map(section => {
                  const sectionItems = template.filter(i => i.section === section);
@@ -4655,6 +4688,8 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
                  );
                })}
             </div>
+              </div>
+            </details>
         </div>
       </div>
 
