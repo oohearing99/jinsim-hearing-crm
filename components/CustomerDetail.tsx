@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Customer, Visit } from '../types';
 import { Calendar, Plus, ChevronRight, FileText, Clock, Headphones, CheckCircle2, Layers, X, FileEdit } from 'lucide-react';
+import { JourneyDashboard } from './journey/JourneyDashboard';
 
 interface Props {
   customer: Customer;
@@ -105,6 +106,10 @@ const CustomerDetail: React.FC<Props> = ({ customer, visits, onSelectVisit, onCr
             <div><p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">총 방문 횟수</p><p className="font-semibold text-slate-700">{visits.length}회</p></div>
           </div>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <JourneyDashboard visits={visits} />
       </div>
 
       <div className="space-y-4">
