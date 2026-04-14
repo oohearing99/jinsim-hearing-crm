@@ -6,6 +6,9 @@ import SpeechTestForm from './SpeechTestForm';
 import PureToneAudiogram from './PureToneAudiogram';
 import HaProtocolTab from './HaProtocolTab';
 import { FileText, Headphones, Activity, CheckCircle2 } from 'lucide-react';
+import StepIndicator from './StepIndicator';
+import VisitSummaryBar from './VisitSummaryBar';
+import { getAllTabStatuses, getCurrentStep, getOverallProgress, CompletionStatus } from '../utils/completionUtils';
 
 interface Props {
   visit: Visit;
@@ -29,6 +32,47 @@ const VisitManager = forwardRef<VisitManagerHandle, Props>(({ visit, customer, o
     { id: 'PTA', name: '순음검사', icon: Activity, color: 'text-orange-600' },
     { id: 'SPEECH', name: '어음검사', icon: Headphones, color: 'text-purple-600' },
   ] as const;
+
+  // 탭별 완료 상태
+  const [tabStatuses, setTabStatuses] = useState<Record<string, CompletionStatus>>({});
+
+  // 스텝 정의
+  const stepDefs = isHA
+    ? [
+        { id: 'Q', label: '접수/설문' },
+        { id: 'PTA', label: '순음검사' },
+        { id: 'SPEECH', label: '어음검사' },
+        { id: 'HA', label: '프로토콜' },
+      ]
+    : [
+        { id: 'Q', label: '접수/설문' },
+        { id: 'PTA', label: '순음검사' },
+        { id: 'SPEECH', label: '어음검사' },
+      ];
+
+  // 탭 순서 (이전/다음 네비게이션용)
+  const stepOrder = isHA ? ['Q', 'PTA', 'SPEECH', 'HA'] as const : ['Q', 'PTA', 'SPEECH'] as const;
+
+  // 완료 상태 갱신
+  useEffect(() => {
+    const statuses = getAllTabStatuses(customer.id, visit.id, isHA);
+    setTabStatuses(statuses);
+  }, [customer.id, visit.id, isHA, activeTab]);
+
+  const currentStepIndex = getCurrentStep(tabStatuses, isHA);
+  const progress = getOverallProgress(tabStatuses, isHA);
+
+  // 스텝 클릭 → 해당 탭으로 이동
+  const handleStepClick = (stepIndex: number) => {
+    const stepId = stepDefs[stepIndex].id;
+    setActiveTab(stepId as any);
+  };
+
+  // 이전/다음 네비게이션
+  const currentTabIndex = stepOrder.indexOf(activeTab as any);
+  const prevTab = currentTabIndex > 0 ? stepOrder[currentTabIndex - 1] : null;
+  const nextTab = currentTabIndex < stepOrder.length - 1 ? stepOrder[currentTabIndex + 1] : null;
+  const getTabLabel = (id: string) => stepDefs.find(s => s.id === id)?.label || id;
 
   // 이미지 캡쳐 핸들러 (직접 JPG 캡쳐 방식 - 안정적)
   const handleCaptureImages = async () => {
@@ -167,32 +211,81 @@ const VisitManager = forwardRef<VisitManagerHandle, Props>(({ visit, customer, o
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 p-1.5 bg-slate-200/50 rounded-2xl">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black transition-all duration-200 ${
-                isActive ? `bg-white shadow-xl ${tab.color} scale-[1.02]` : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              <Icon className="w-5 h-5" />{tab.name}
-            </button>
-          );
-        })}
+    <div className="space-y-0">
+      {/* 방문 요약 바 */}
+      <VisitSummaryBar visit={visit} customer={customer} progress={progress} />
+
+      {/* 스텝 인디케이터 */}
+      <StepIndicator
+        steps={stepDefs}
+        statuses={tabStatuses}
+        currentStepIndex={currentStepIndex}
+        onStepClick={handleStepClick}
+      />
+
+      {/* 탭 바 */}
+      <div className="px-4 pt-4">
+        <div className="flex flex-wrap gap-2 p-1.5 bg-slate-200/50 rounded-2xl">
+          {tabs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black transition-all duration-200 ${
+                  isActive ? `bg-white shadow-xl ${tab.color} scale-[1.02]` : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <Icon className="w-5 h-5" />{tab.name}
+                {/* 완료 배지 */}
+                {tabStatuses[tab.id] === 'completed' && (
+                  <span className="w-[18px] h-[18px] rounded-full bg-green-600 text-white flex items-center justify-center text-[10px] font-black">✓</span>
+                )}
+                {tabStatuses[tab.id] === 'in_progress' && (
+                  <span className="w-[18px] h-[18px] rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-black">·</span>
+                )}
+                {tabStatuses[tab.id] === 'not_started' && (
+                  <span className="w-[18px] h-[18px] rounded-full bg-slate-200 text-slate-400 flex items-center justify-center text-[10px] font-black">—</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm min-h-[700px] overflow-hidden">
+      {/* 탭 콘텐츠 */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm min-h-[700px] overflow-hidden mx-4">
         <div className="p-8">
-          {activeTab === 'HA' && isHA && <HaProtocolTab visit={visit} customer={customer} onSave={() => onSaveSuccess('프로토콜 데이터가 저장되었습니다.')} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} />}
+          {activeTab === 'HA' && isHA && <HaProtocolTab visit={visit} customer={customer} onSave={() => onSaveSuccess('프로토콜 데이터가 저장되었습니다.')} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} onNavigateToTab={(tab) => setActiveTab(tab)} />}
           {activeTab === 'Q' && <QuestionnaireForm visit={visit} customer={customer} onSave={() => onSaveSuccess('상담 설문지가 저장되었습니다.')} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} />}
           {activeTab === 'SPEECH' && <SpeechTestForm visit={visit} customer={customer} onSave={() => onSaveSuccess('어음검사 결과가 저장되었습니다.')} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} />}
           {activeTab === 'PTA' && <PureToneAudiogram visit={visit} customer={customer} onSave={() => onSaveSuccess('순음청력검사 결과가 저장되었습니다.')} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} />}
         </div>
+      </div>
+
+      {/* 하단 네비게이션 */}
+      <div className="border-t border-slate-200 px-6 py-4 flex justify-between items-center bg-white rounded-b-3xl mx-4">
+        {prevTab ? (
+          <button
+            onClick={() => setActiveTab(prevTab as any)}
+            className="px-5 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-black hover:bg-slate-50 transition-all text-slate-600"
+          >
+            ← 이전: {getTabLabel(prevTab)}
+          </button>
+        ) : (
+          <div />
+        )}
+        {nextTab ? (
+          <button
+            onClick={() => setActiveTab(nextTab as any)}
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+          >
+            다음: {getTabLabel(nextTab)} →
+          </button>
+        ) : (
+          <div />
+        )}
       </div>
     </div>
   );
