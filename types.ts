@@ -32,6 +32,7 @@ export interface Visit extends BaseRecord {
   visit_date: string;
   purpose: string[];
   memo?: string;
+  visit_memo?: string; // 방문 생성 시 입력하는 간단 메모
   visit_type: VisitType;
   ha_stage: HAStage | null;
   ha_stage_label?: string;
