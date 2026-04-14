@@ -9,6 +9,7 @@ import SpeechEditor from './editors/SpeechEditor';
 import TestSummaryCards from './TestSummaryCards';
 import { TopPriorityPanel } from './ha/TopPriorityPanel';
 import { FREQUENCIES } from '../constants';
+import { InputTimer } from '../utils/inputTimer';
 
 // 이경검사 체크리스트 항목 정의
 const OTOSCOPY_CHECKLIST_ITEMS: { key: keyof OtoscopyChecklist; label: string; category: 'ear_canal' | 'tympanic' }[] = [
@@ -560,6 +561,12 @@ const RenderCustomA = (props: any) => {
 const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange, saveTriggerRef, onNavigateToTab }) => {
   const prefCounselor = localStorage.getItem('jinsim_pref_counselor') || 'Admin';
   const prefCenter = localStorage.getItem('jinsim_pref_center') || 'SEOUL_MAIN';
+
+  useEffect(() => {
+    const t = new InputTimer('ha-protocol');
+    t.start();
+    return () => { t.stop(); };
+  }, []);
 
   const stage = visit.ha_stage || 'HA_1';
   const template = HA_PROTOCOL_TEMPLATES[stage];

@@ -1,6 +1,7 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { QuestionnaireData } from '../../types';
+import { InputTimer } from '../../utils/inputTimer';
 import {
   QUESTIONNAIRE_STEPS,
   isStepComplete,
@@ -25,6 +26,14 @@ export function QuestionnaireWizard({ initialData, onSave, onDataChange }: Props
   const [currentId, setCurrentId] = useState<QuestionnaireStepId>('basic');
   // firstIncompleteStep kept imported for future use (resume navigation)
   void firstIncompleteStep;
+
+  const timerRef = useRef<InputTimer | null>(null);
+  useEffect(() => {
+    const t = new InputTimer('questionnaire');
+    t.start();
+    timerRef.current = t;
+    return () => { t.stop(); };
+  }, []);
 
   useEffect(() => {
     onDataChange?.(data);
