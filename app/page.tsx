@@ -16,6 +16,10 @@ export default function Home() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
   const [isCreatingVisit, setIsCreatingVisit] = useState(false);
+  const [selectedVisitType, setSelectedVisitType] = useState<VisitType | null>(null);
+  const [selectedHaStage, setSelectedHaStage] = useState<HAStage | null>(null);
+  const [visitMemo, setVisitMemo] = useState('');
+  const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -186,6 +190,14 @@ export default function Home() {
     showToast('고객 정보가 수정되었습니다.');
   };
 
+  const handleOpenCreateVisit = () => {
+    setSelectedVisitType(null);
+    setSelectedHaStage(null);
+    setVisitMemo('');
+    setVisitDate(new Date().toISOString().split('T')[0]);
+    setIsCreatingVisit(true);
+  };
+
   const handleFinalizeVisitCreate = (type: VisitType, stage: HAStage | null) => {
     if (!selectedCustomer) return;
 
@@ -198,14 +210,15 @@ export default function Home() {
 
     const nextRule = stage === 'HA_1' || stage === 'HA_2' ? 'WEEKLY' : '3MONTH';
     const nextDays = nextRule === 'WEEKLY' ? 7 : 90;
-    const nextDate = new Date();
+    const nextDate = new Date(visitDate);
     nextDate.setDate(nextDate.getDate() + nextDays);
 
     const newVisit: Visit = {
       id: Math.random().toString(36).substr(2, 9),
       customer_id: selectedCustomer.id,
-      visit_date: new Date().toISOString().split('T')[0],
+      visit_date: visitDate,
       purpose: stage ? [stageLabels[stage]] : ['일반 상담'],
+      visit_memo: visitMemo || undefined,
       visit_type: type,
       ha_stage: stage,
       ha_stage_label: stage ? stageLabels[stage] : undefined,
@@ -218,6 +231,7 @@ export default function Home() {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+
     setVisits(prev => [...prev, newVisit]);
     setIsCreatingVisit(false);
     handleSelectVisit(newVisit);
@@ -717,7 +731,7 @@ export default function Home() {
         <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
           <div className="max-w-7xl mx-auto">
             {view === AppState.SEARCH && <CustomerSearch customers={customers} onSelect={handleSelectCustomer} onCreate={handleCreateCustomer} />}
-            {view === AppState.CUSTOMER_DETAIL && selectedCustomer && (<CustomerDetail customer={selectedCustomer} visits={visits.filter(v => v.customer_id === selectedCustomer.id)} onSelectVisit={handleSelectVisit} onCreateVisit={() => setIsCreatingVisit(true)} onUpdateCustomer={handleUpdateCustomer} />)}
+            {view === AppState.CUSTOMER_DETAIL && selectedCustomer && (<CustomerDetail customer={selectedCustomer} visits={visits.filter(v => v.customer_id === selectedCustomer.id)} onSelectVisit={handleSelectVisit} onCreateVisit={handleOpenCreateVisit} onUpdateCustomer={handleUpdateCustomer} />)}
             {view === AppState.VISIT_DETAIL && selectedVisit && selectedCustomer && (<VisitManager ref={visitManagerRef} visit={selectedVisit} customer={selectedCustomer} onSaveSuccess={(msg) => { showToast(msg); setIsDirty(false); }} onDirtyChange={setIsDirty} saveTriggerRef={saveTriggerRef} />)}
           </div>
         </div>
@@ -759,12 +773,109 @@ export default function Home() {
 
       {isCreatingVisit && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in duration-300">
-            <div className="p-8 bg-slate-50 border-b flex justify-between items-center"><h3 className="text-2xl font-black tracking-tight">방문 유형 선택</h3><button onClick={() => setIsCreatingVisit(false)} className="p-2 hover:bg-white rounded-full transition-all"><X className="w-6 h-6 text-slate-400" /></button></div>
-            <div className="p-8 space-y-4">
-               <button onClick={() => handleFinalizeVisitCreate('GENERAL', null)} className="w-full p-6 border-2 border-slate-100 rounded-[2rem] text-left hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center gap-5 group shadow-sm hover:shadow-lg"><div className="bg-blue-100 p-4 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md"><Search className="w-7 h-7" /></div><div><p className="font-black text-lg text-slate-800">일반 상담 / 청력 검사</p><p className="text-xs font-bold text-slate-500 mt-1">기초 문진 및 모든 임상 평가 포함</p></div></button>
-               <div className="pt-4"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-3 border-l-4 border-orange-500">HA Protocol</p><div className="grid grid-cols-1 gap-3">{[{ id: 'HA_1', label: '1차(기초평가/첫 착용)' },{ id: 'HA_2', label: '2차(1주 후 적응체크)' },{ id: 'HA_3', label: '3차(2주 후 심화조정)' },{ id: 'AFTERCARE_3MO', label: '사후관리(3개월 점검)' }].map(st => (<button key={st.id} onClick={() => handleFinalizeVisitCreate('HA_PROTOCOL', st.id as HAStage)} className="w-full p-4 border-2 border-slate-50 rounded-2xl text-left hover:border-orange-500 hover:bg-orange-50 transition-all flex items-center gap-4 group"><div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-black shadow-sm group-hover:bg-orange-600 group-hover:text-white transition-all">{st.id.split('_').pop()}</div><p className="text-sm font-black text-slate-700">{st.label}</p></button>))}</div></div>
+          <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+            {/* 헤더 */}
+            <div className="bg-slate-900 px-8 py-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ClipboardList className="w-6 h-6 text-orange-500" />
+                <div>
+                  <h3 className="text-white text-xl font-black">새 상담 시작</h3>
+                  <p className="text-slate-400 text-xs font-bold mt-0.5">상담 유형과 기본 정보를 입력해주세요</p>
+                </div>
+              </div>
+              <button onClick={() => setIsCreatingVisit(false)} className="p-2 hover:bg-slate-800 rounded-full transition-all">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
             </div>
+
+            {/* 상담 유형 */}
+            <div className="p-8 border-b border-slate-100 space-y-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">상담 유형</p>
+              <button
+                onClick={() => { setSelectedVisitType('GENERAL'); setSelectedHaStage(null); }}
+                className={`w-full p-5 border-2 rounded-2xl text-left flex items-center gap-4 group transition-all ${
+                  selectedVisitType === 'GENERAL' ? 'border-blue-500 bg-blue-50' : 'border-slate-100 hover:border-blue-300 hover:bg-blue-50/30'
+                }`}
+              >
+                <div className={`p-3 rounded-xl transition-all ${selectedVisitType === 'GENERAL' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'}`}>
+                  <Search className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="font-black text-slate-800">일반 상담 / 청력 검사</p>
+                  <p className="text-xs font-bold text-slate-500 mt-0.5">기초 문진 및 모든 임상 평가 포함</p>
+                </div>
+              </button>
+
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2 border-l-4 border-orange-500 pl-3">HA Protocol</p>
+              <div className="grid grid-cols-2 gap-3">
+                {([
+                  { id: 'HA_1' as HAStage, label: '1차', desc: '기초평가/첫 착용' },
+                  { id: 'HA_2' as HAStage, label: '2차', desc: '1주 후 적응체크' },
+                  { id: 'HA_3' as HAStage, label: '3차', desc: '2주 후 심화조정' },
+                  { id: 'AFTERCARE_3MO' as HAStage, label: '사후관리', desc: '3개월 점검' },
+                ]).map(st => (
+                  <button
+                    key={st.id}
+                    onClick={() => { setSelectedVisitType('HA_PROTOCOL'); setSelectedHaStage(st.id); }}
+                    className={`p-4 border-2 rounded-2xl text-left transition-all ${
+                      selectedVisitType === 'HA_PROTOCOL' && selectedHaStage === st.id
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-slate-100 hover:border-orange-300 hover:bg-orange-50/30'
+                    }`}
+                  >
+                    <p className={`text-sm font-black ${selectedHaStage === st.id ? 'text-orange-700' : 'text-slate-700'}`}>{st.label}</p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">{st.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 방문 정보 — 유형 선택 후에만 표시 */}
+            {selectedVisitType && (
+              <div className="p-8 space-y-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">방문 정보</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-2">방문 날짜</label>
+                    <input
+                      type="date"
+                      value={visitDate}
+                      onChange={e => setVisitDate(e.target.value)}
+                      className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl font-bold outline-none focus:ring-4 focus:ring-blue-100 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-2">방문 목적</label>
+                    <div className="p-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold text-orange-600">
+                      {selectedVisitType === 'GENERAL' ? '일반 상담' : selectedHaStage ? `${selectedHaStage === 'HA_1' ? '1차(기초평가/첫 착용)' : selectedHaStage === 'HA_2' ? '2차(1주 후 적응체크)' : selectedHaStage === 'HA_3' ? '3차(2주 후 심화조정)' : '사후관리(3개월 점검)'}` : ''}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-2">방문 메모 <span className="font-normal text-slate-300">(선택)</span></label>
+                  <textarea
+                    value={visitMemo}
+                    onChange={e => setVisitMemo(e.target.value)}
+                    placeholder="예: 타 센터 보청기 사용 중, 불만족으로 내원..."
+                    className="w-full p-3 bg-white border-2 border-slate-200 rounded-xl text-sm outline-none resize-none h-16 focus:ring-4 focus:ring-blue-100 transition-all"
+                  />
+                </div>
+                <div className="flex gap-3 justify-end pt-2">
+                  <button
+                    onClick={() => setIsCreatingVisit(false)}
+                    className="px-6 py-3 border-2 border-slate-100 rounded-xl font-black text-slate-500 hover:bg-slate-50 transition-all"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={() => handleFinalizeVisitCreate(selectedVisitType, selectedHaStage)}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2"
+                  >
+                    상담 시작 <span>→</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
