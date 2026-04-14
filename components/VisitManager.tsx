@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { Visit, Customer } from '../types';
-import QuestionnaireForm from './QuestionnaireForm';
+import React, { useState, useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
+import { Visit, Customer, QuestionnaireData } from '../types';
+import { QuestionnaireWizard } from './wizard/QuestionnaireWizard';
+import { BRAND_ID } from '../constants';
 import SpeechTestForm from './SpeechTestForm';
 import PureToneAudiogram from './PureToneAudiogram';
 import HaProtocolTab from './HaProtocolTab';
@@ -258,7 +259,7 @@ const VisitManager = forwardRef<VisitManagerHandle, Props>(({ visit, customer, o
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm min-h-[700px] overflow-hidden mx-4">
         <div className="p-8">
           {activeTab === 'HA' && isHA && <HaProtocolTab visit={visit} customer={customer} onSave={() => onSaveSuccess('프로토콜 데이터가 저장되었습니다.')} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} onNavigateToTab={(tab) => setActiveTab(tab)} />}
-          {activeTab === 'Q' && <QuestionnaireForm visit={visit} customer={customer} onSave={() => onSaveSuccess('상담 설문지가 저장되었습니다.')} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} />}
+          {activeTab === 'Q' && <QuestionnaireTabPanel visit={visit} customer={customer} onSaveSuccess={onSaveSuccess} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} />}
           {activeTab === 'SPEECH' && <SpeechTestForm visit={visit} customer={customer} onSave={() => onSaveSuccess('어음검사 결과가 저장되었습니다.')} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} />}
           {activeTab === 'PTA' && <PureToneAudiogram visit={visit} customer={customer} onSave={() => onSaveSuccess('순음청력검사 결과가 저장되었습니다.')} onDirtyChange={onDirtyChange} saveTriggerRef={saveTriggerRef} />}
         </div>
@@ -292,5 +293,71 @@ const VisitManager = forwardRef<VisitManagerHandle, Props>(({ visit, customer, o
 });
 
 VisitManager.displayName = 'VisitManager';
+
+function QuestionnaireTabPanel({ visit, customer, onSaveSuccess, onDirtyChange, saveTriggerRef }: {
+  visit: Visit;
+  customer: Customer;
+  onSaveSuccess: (msg: string) => void;
+  onDirtyChange: (d: boolean) => void;
+  saveTriggerRef: React.MutableRefObject<() => void>;
+}) {
+  const [initialData] = useState<Partial<QuestionnaireData>>(() => {
+    try {
+      const savedByCustomer = localStorage.getItem(`q_customer_${customer.id}`);
+      const savedByVisit = localStorage.getItem(`q_${visit.id}`);
+      const saved = savedByCustomer || savedByVisit;
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('[QuestionnaireTabPanel] load failed', e);
+    }
+    return {
+      visit_id: visit.id,
+      customer_id: customer.id,
+      visit_motives: [],
+      concerns_multi: [],
+      cosi_top3_goals: [],
+      created_at: new Date().toISOString(),
+    };
+  });
+  const liveDataRef = useRef<Partial<QuestionnaireData>>(initialData);
+
+  const persist = (d: Partial<QuestionnaireData>) => {
+    const full = {
+      ...d,
+      brand_id: BRAND_ID,
+      center_id: localStorage.getItem('jinsim_pref_center') || 'SEOUL_MAIN',
+      counselor_name: localStorage.getItem('jinsim_pref_counselor') || 'Admin',
+      visit_id: visit.id,
+      customer_id: customer.id,
+      updated_at: new Date().toISOString(),
+    };
+    localStorage.setItem(`q_customer_${customer.id}`, JSON.stringify(full));
+    localStorage.setItem(`q_${visit.id}`, JSON.stringify(full));
+  };
+
+  useEffect(() => {
+    saveTriggerRef.current = () => {
+      persist(liveDataRef.current);
+      onDirtyChange(false);
+      onSaveSuccess('상담 설문지가 저장되었습니다.');
+    };
+  }, [saveTriggerRef, onDirtyChange, onSaveSuccess, visit.id, customer.id]);
+
+  return (
+    <QuestionnaireWizard
+      initialData={initialData}
+      onDataChange={(d) => {
+        liveDataRef.current = d;
+        onDirtyChange(true);
+        persist(d);
+      }}
+      onSave={(d) => {
+        persist(d);
+        onDirtyChange(false);
+        onSaveSuccess('상담 설문지가 저장되었습니다.');
+      }}
+    />
+  );
+}
 
 export default VisitManager;
