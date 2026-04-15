@@ -4,7 +4,7 @@
 
 "새 상담/프로토콜 시작" 모달의 분류 체계가 논리적이지 못해 재설계한다. 기존에는 "상담 유형"이라는 단일 축에 **서비스 카테고리**("일반 상담")와 **프로세스 단계**(HA_1/HA_2/HA_3/사후관리_3개월)를 병렬 나열하여 차원이 다른 개념을 섞어 놓았다. 본 설계는 두 축을 분리하고, 피팅·사후관리 차수를 무제한 확장 가능하게 만든다.
 
-**대상 레포지토리**: https://github.com/oohearing99/cc-crm
+**대상 레포지토리**: https://github.com/oohearing99/jinsim-hearing-crm
 
 **브랜치**: `feat/visit-manager-ux-redesign` 이후 후속 브랜치에서 구현 (예: `feat/visit-purpose-redesign`)
 
