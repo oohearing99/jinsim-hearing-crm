@@ -2,6 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Visit, Customer, HASession, HAStage, DetailedClinicalResults, QuestionnaireData, DetailedSpeech, DetailedPureTone, OtoscopyChecklist, TympanometryChecklist, FitComfortChecklist, ProgrammingChecklist, RemChecklist, MpoChecklist, ListeningCheckChecklist, EaaChecklist, DeepCleaningChecklist, OrientationCoreChecklist, AdaptationScheduleChecklist, CommStrategiesChecklist, EducationRefreshChecklist, DataloggingAdjChecklist, FineTuningChecklist, DevicePlanChecklist, ExpectationChecklist } from '../types';
 import { HA_PROTOCOL_TEMPLATES } from '../data/haProtocolTemplates';
+import { resolveTemplate } from '../utils/protocolTemplateResolver';
+import { formatVisitPurpose } from '../utils/visitPurposeLabel';
 import { Save, CheckCircle2, Activity, Headphones, FileText, ClipboardList, ChevronDown, ChevronUp, AlertTriangle, Circle, AlertCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import PureToneEditor from './editors/PureToneEditor';
@@ -569,7 +571,7 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
   }, []);
 
   const stage = visit.ha_stage || 'HA_1';
-  const template = HA_PROTOCOL_TEMPLATES[stage];
+  const template = resolveTemplate(visit) ?? HA_PROTOCOL_TEMPLATES['HA_1'];
   
   const [session, setSession] = useState<HASession>(() => {
     const saved = localStorage.getItem(`hasession_${visit.id}`);
@@ -979,7 +981,7 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
         <div className="bg-slate-900 px-10 py-6 flex items-center justify-between">
            <div className="flex items-center gap-4">
               <ClipboardList className="w-8 h-8 text-orange-500" />
-              <h4 className="text-white text-2xl font-black">{visit.ha_stage_label} - 임상 프로토콜</h4>
+              <h4 className="text-white text-2xl font-black">{formatVisitPurpose(visit) ?? visit.ha_stage_label} - 임상 프로토콜</h4>
            </div>
            <div className="text-slate-400 text-sm font-bold">방문일: {new Date(visit.visit_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
         </div>

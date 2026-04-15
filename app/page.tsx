@@ -8,6 +8,7 @@ import CustomerDetail from '@/components/CustomerDetail';
 import VisitManager, { VisitManagerHandle } from '@/components/VisitManager';
 import { VisitPurposeModal, type NewVisitPayload } from '../components/visit/VisitPurposeModal';
 import { migrateVisitsV3 } from '../lib/migrations/visit-purpose';
+import { formatVisitPurpose } from '../utils/visitPurposeLabel';
 import { Search, User, ClipboardList, UserCheck, MapPin, X, FileSpreadsheet, Settings, CheckCircle2, AlertCircle, Download, Upload, Database, Camera, FileEdit } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { downloadBackup, validateBackupFile, restoreBackup, getBackupStats, saveLastBackupTime, shouldRemindBackup } from '@/utils/backupUtils';
@@ -288,7 +289,7 @@ export default function Home() {
           '상담자': v.counselor_name,
           '센터': v.center_id,
           '방문유형': v.visit_type === 'GENERAL' ? '일반상담' : 'HA프로토콜',
-          '방문단계': v.ha_stage_label || '일반상담',
+          '방문단계': formatVisitPurpose(v) ?? v.ha_stage_label ?? '일반상담',
           '방문목적': v.purpose?.join(', ') || '-',
           '방문메모': v.memo || '-',
         };

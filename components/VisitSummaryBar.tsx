@@ -1,6 +1,7 @@
 import React from 'react';
 import { Visit, Customer } from '../types';
 import { ClipboardList } from 'lucide-react';
+import { formatVisitPurpose } from '../utils/visitPurposeLabel';
 
 interface Props {
   visit: Visit;
@@ -9,7 +10,7 @@ interface Props {
 }
 
 export default function VisitSummaryBar({ visit, customer, progress }: Props) {
-  const stageLabel = visit.ha_stage_label || '일반 상담';
+  const stageLabel = formatVisitPurpose(visit) ?? visit.ha_stage_label ?? '일반 상담';
   const progressPercent = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
 
   return (

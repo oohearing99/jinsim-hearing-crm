@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Customer, Visit } from '../types';
 import { Calendar, Plus, ChevronRight, FileText, Clock, Headphones, CheckCircle2, Layers, X, FileEdit } from 'lucide-react';
 import { JourneyDashboard } from './journey/JourneyDashboard';
+import { formatVisitPurpose } from '../utils/visitPurposeLabel';
 
 interface Props {
   customer: Customer;
@@ -48,7 +49,7 @@ const CustomerDetail: React.FC<Props> = ({ customer, visits, onSelectVisit, onCr
           date: visit.visit_date,
           visitType: visit.visit_type ?? 'GENERAL',
           haStage: visit.ha_stage ?? null,
-          haStageLabel: visit.ha_stage_label || null,
+          haStageLabel: formatVisitPurpose(visit) ?? visit.ha_stage_label ?? null,
           visits: [visit],
           latestVisit: visit
         });
