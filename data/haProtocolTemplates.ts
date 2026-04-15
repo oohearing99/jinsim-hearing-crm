@@ -67,3 +67,36 @@ export const HA_PROTOCOL_TEMPLATES: Record<HAStage, ChecklistItem[]> = {
     { key: 'schedule_next', label: '다음 사후관리 예약(+90일)', section: '계획', required: true, defaultStatus: 'DONE' },
   ]
 };
+
+export const INITIAL_TEMPLATE: ChecklistItem[] = [
+  { key: 'intake_review', label: '문진/상담 (불편, 목표, 기대치)', section: '문진/상담', required: true, defaultStatus: 'DONE' },
+  { key: 'otoscopy', label: '이경검사', section: '귀/중이', required: true, defaultStatus: 'DONE' },
+  { key: 'pure_tone_ac', label: '순음청력검사 (기도)', section: '청각검사', required: true, defaultStatus: 'DONE' },
+  { key: 'pure_tone_bc', label: '골도검사', section: '청각검사', required: true, defaultStatus: 'DONE' },
+  { key: 'speech_srt', label: 'SRT 어음검사', section: '청각검사', required: true, defaultStatus: 'DONE' },
+  { key: 'cosi_goals_set', label: 'COSI 목표 TOP3 설정', section: '문진/상담', required: false, defaultStatus: 'DONE' },
+  { key: 'counseling_next_step', label: '다음 단계 상담', section: '계획', required: true, defaultStatus: 'DONE' },
+];
+
+export const FITTING_EXTRA_TEMPLATE: ChecklistItem[] = [
+  { key: 'listening_check', label: '보청기 청취점검', section: '기기점검', required: true, defaultStatus: 'DONE' },
+  { key: 'issue_identification', label: '불편 사항 파악', section: '조정', required: true, defaultStatus: 'DONE' },
+  { key: 'fine_tuning', label: '미세조정', section: '조정', required: true, defaultStatus: 'DONE' },
+  { key: 'rem_reverify', label: 'REM 재검증', section: '조정', required: false, defaultStatus: 'DONE' },
+  { key: 'validation_cosi', label: 'COSI 재평가', section: '결과평가', required: true, defaultStatus: 'DONE' },
+  { key: 'schedule_next', label: '다음 방문 예약', section: '계획', required: true, defaultStatus: 'DONE' },
+];
+
+export const SERVICE_TEMPLATE: ChecklistItem[] = [
+  { key: 'issue_description', label: '증상/요청 기록', section: '문진/상담', required: true, defaultStatus: 'DONE' },
+  { key: 'device_inspection', label: '기기 점검', section: '기기점검', required: true, defaultStatus: 'DONE' },
+  { key: 'repair_or_replacement', label: '수리/교체 조치', section: '기기점검', required: true, defaultStatus: 'DONE' },
+  { key: 'followup_required', label: '후속 조치 필요 여부', section: '계획', required: false, defaultStatus: 'DONE' },
+];
+
+export const REFUND_EXCHANGE_TEMPLATE: ChecklistItem[] = [
+  { key: 'dissatisfaction_reason', label: '불만족 사유 청취', section: '문진/상담', required: true, defaultStatus: 'DONE' },
+  { key: 'adjustment_attempt_log', label: '기 조정 이력 확인', section: '조정', required: true, defaultStatus: 'DONE' },
+  { key: 'refund_exchange_decision', label: '반품/교환 결정', section: '계획', required: true, defaultStatus: 'DONE' },
+  { key: 'accounting_handoff', label: '정산/회계 인계', section: '계획', required: true, defaultStatus: 'DONE' },
+];
