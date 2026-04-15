@@ -23,19 +23,38 @@ export interface Customer extends BaseRecord {
   surgery_history: 'Y' | 'N' | null;
 }
 
-export type VisitType = 'GENERAL' | 'HA_PROTOCOL';
-export type HAStage = 'HA_1' | 'HA_2' | 'HA_3' | 'AFTERCARE_3MO';
+export type VisitType = 'GENERAL' | 'HA_PROTOCOL';           // deprecated
+export type HAStage = 'HA_1' | 'HA_2' | 'HA_3' | 'AFTERCARE_3MO'; // deprecated
+
+export type VisitPurpose = 'INITIAL' | 'FITTING' | 'AFTERCARE' | 'SERVICE' | 'REFUND_EXCHANGE';
+export type AftercareBucket = 'M3' | 'M6' | 'M12' | 'LONGTERM';
 
 export interface Visit extends BaseRecord {
   id: string;
   customer_id: string;
   visit_date: string;
-  purpose: string[];
   memo?: string;
-  visit_memo?: string; // 방문 생성 시 입력하는 간단 메모
-  visit_type: VisitType;
-  ha_stage: HAStage | null;
+  visit_memo?: string;
+
+  // v3 신규 (필수)
+  visit_purpose: VisitPurpose;
+  visit_motives: string[];
+  primary_purpose_memo?: string;
+
+  // FITTING
+  fitting_session_no?: number;
+  purchase_cycle_id?: string;
+
+  // AFTERCARE
+  aftercare_month?: number;
+  aftercare_bucket?: AftercareBucket;
+
+  // deprecated (한시 유지)
+  purpose?: string[];
+  visit_type?: VisitType;
+  ha_stage?: HAStage | null;
   ha_stage_label?: string;
+
   recommended_next_visit_date?: string | null;
   next_visit_rule?: 'WEEKLY' | '3MONTH' | null;
   protocol_version?: string;
