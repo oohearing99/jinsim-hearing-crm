@@ -2,11 +2,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Visit, Customer, HASession, HAStage, DetailedClinicalResults, QuestionnaireData, DetailedSpeech, DetailedPureTone, OtoscopyChecklist, TympanometryChecklist, FitComfortChecklist, ProgrammingChecklist, RemChecklist, MpoChecklist, ListeningCheckChecklist, EaaChecklist, DeepCleaningChecklist, OrientationCoreChecklist, AdaptationScheduleChecklist, CommStrategiesChecklist, EducationRefreshChecklist, DataloggingAdjChecklist, FineTuningChecklist, DevicePlanChecklist, ExpectationChecklist } from '../types';
 import { HA_PROTOCOL_TEMPLATES } from '../data/haProtocolTemplates';
+import { resolveTemplate } from '../utils/protocolTemplateResolver';
+import { formatVisitPurpose } from '../utils/visitPurposeLabel';
 import { Save, CheckCircle2, Activity, Headphones, FileText, ClipboardList, ChevronDown, ChevronUp, AlertTriangle, Circle, AlertCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import PureToneEditor from './editors/PureToneEditor';
 import SpeechEditor from './editors/SpeechEditor';
+import TestSummaryCards from './TestSummaryCards';
+import { TopPriorityPanel } from './ha/TopPriorityPanel';
 import { FREQUENCIES } from '../constants';
+import { InputTimer } from '../utils/inputTimer';
 
 // 이경검사 체크리스트 항목 정의
 const OTOSCOPY_CHECKLIST_ITEMS: { key: keyof OtoscopyChecklist; label: string; category: 'ear_canal' | 'tympanic' }[] = [
@@ -499,6 +504,7 @@ interface Props {
   onSave: () => void;
   onDirtyChange: (isDirty: boolean) => void;
   saveTriggerRef: React.MutableRefObject<() => void>;
+  onNavigateToTab?: (tab: 'PTA' | 'SPEECH') => void;
 }
 
 const RenderCustomO = (props: any) => {
@@ -554,12 +560,18 @@ const RenderCustomA = (props: any) => {
   );
 };
 
-const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange, saveTriggerRef }) => {
+const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange, saveTriggerRef, onNavigateToTab }) => {
   const prefCounselor = localStorage.getItem('jinsim_pref_counselor') || 'Admin';
   const prefCenter = localStorage.getItem('jinsim_pref_center') || 'SEOUL_MAIN';
 
+  useEffect(() => {
+    const t = new InputTimer('ha-protocol');
+    t.start();
+    return () => { t.stop(); };
+  }, []);
+
   const stage = visit.ha_stage || 'HA_1';
-  const template = HA_PROTOCOL_TEMPLATES[stage];
+  const template = resolveTemplate(visit) ?? HA_PROTOCOL_TEMPLATES['HA_1'];
   
   const [session, setSession] = useState<HASession>(() => {
     const saved = localStorage.getItem(`hasession_${visit.id}`);
@@ -951,13 +963,25 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
 
   const missingRequired = template.filter(item => item.required && session.checklist[item.key]?.status !== 'DONE');
 
+  const priorityItems = useMemo(() =>
+    template.map((item, idx) => ({
+      id: item.key,
+      stage,
+      priority: (item.required ? 0 : 1000) + idx,
+      status: (session.checklist[item.key]?.status ?? 'PENDING') as 'PENDING' | 'DONE' | 'SKIPPED',
+      title: item.label,
+      description: item.section,
+    })),
+    [template, session.checklist, stage]
+  );
+
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-32">
       <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl" data-capture="visit-summary">
         <div className="bg-slate-900 px-10 py-6 flex items-center justify-between">
            <div className="flex items-center gap-4">
               <ClipboardList className="w-8 h-8 text-orange-500" />
-              <h4 className="text-white text-2xl font-black">{visit.ha_stage_label} - 임상 프로토콜</h4>
+              <h4 className="text-white text-2xl font-black">{formatVisitPurpose(visit) ?? visit.ha_stage_label} - 임상 프로토콜</h4>
            </div>
            <div className="text-slate-400 text-sm font-bold">방문일: {new Date(visit.visit_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
         </div>
@@ -979,105 +1003,32 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
               </div>
             )}
 
-            <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200" data-capture="pure-tone-audiogram">
-               <div className="flex justify-between items-center mb-6">
-                 <h5 className="text-sm font-black text-slate-600 tracking-wide flex items-center gap-2">
-                   <Activity className="w-5 h-5 text-orange-500" /> 순음청력검사 결과
-                 </h5>
-                 <div className="flex items-center gap-4 text-xs font-bold">
-                   {testDates.previousDate && (
-                     <div className="flex items-center gap-2">
-                       <div className="w-3 h-3 rounded-full bg-red-300 border-2 border-red-400"></div>
-                       <span className="text-slate-500">이전 검사: {new Date(testDates.previousDate).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })}</span>
-                     </div>
-                   )}
-                   {testDates.currentDate && session.results_detailed?.pure_tone?.performed && (
-                     <div className="flex items-center gap-2">
-                       <div className="w-3 h-3 rounded-full bg-red-600 border-2 border-red-700"></div>
-                       <span className="text-slate-700">현재 검사: {new Date(testDates.currentDate).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })}</span>
-                     </div>
-                   )}
-                 </div>
-               </div>
-               <div className="w-full h-[500px] bg-white rounded-3xl border p-6 shadow-inner">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="1 1" stroke="#f1f5f9" />
-                      <XAxis dataKey="frequency" tick={{ fontSize: 10, fontWeight: 700 }} />
-                      <YAxis reversed domain={[-10, 120]} tick={{ fontSize: 10, fontWeight: 700 }} />
-                      <Tooltip />
-                      <Legend verticalAlign="top" height={36} />
-                      {/* 이전 검사 결과 (옅은 색) */}
-                      <Line type="monotone" dataKey="prev_rt_ac" stroke="#fca5a5" name="이전 우측 기도" strokeWidth={2} strokeDasharray="5 5" dot={<RenderCustomO stroke="#fca5a5" />} connectNulls />
-                      <Line type="monotone" dataKey="prev_lt_ac" stroke="#93c5fd" name="이전 좌측 기도" strokeWidth={2} strokeDasharray="5 5" dot={<RenderCustomX stroke="#93c5fd" />} connectNulls />
-                      {/* 현재 검사 결과 (진한 색) */}
-                      <Line type="monotone" dataKey="rt_ac" stroke="#ef4444" name="우측 기도 (○)" strokeWidth={3} dot={<RenderCustomO stroke="#ef4444" />} connectNulls />
-                      <Line type="monotone" dataKey="lt_ac" stroke="#3b82f6" name="좌측 기도 (×)" strokeWidth={3} dot={<RenderCustomX stroke="#3b82f6" />} connectNulls />
-                      <Line type="monotone" dataKey="rt_sf" stroke="#ef4444" name="우측 음장 (A)" strokeWidth={3} dot={<RenderCustomA stroke="#ef4444" />} connectNulls />
-                      <Line type="monotone" dataKey="lt_sf" stroke="#3b82f6" name="좌측 음장 (A)" strokeWidth={3} dot={<RenderCustomA stroke="#3b82f6" />} connectNulls />
-                    </LineChart>
-                  </ResponsiveContainer>
-               </div>
+            {/* 검사 결과 요약 카드 (읽기 전용) */}
+            <TestSummaryCards
+              visitId={visit.id}
+              onNavigateToTab={onNavigateToTab || (() => {})}
+            />
 
-               {/* 순음/음장검사 입력 */}
-               <div className="mt-8">
-                 <PureToneEditor
-                   data={(() => {
-                     const ptData = session.results_detailed?.pure_tone;
-                     // 기본값 설정
-                     const defaultData = {
-                       performed: false,
-                       test_date: null,
-                       transducer: null,
-                       ac_dbhl: { right: {}, left: {} },
-                       sf_dbhl: { right: {}, left: {} },
-                       bc_dbhl: { right: {}, left: {} },
-                       nr: { right: [], left: [], sf_right: [], sf_left: [] },
-                       masking_used: null,
-                       notes: null,
-                       derived: { pta_right: null, pta_left: null, pta_sf_right: null, pta_sf_left: null }
-                     };
+            <TopPriorityPanel
+              items={priorityItems}
+              stage={stage}
+              limit={5}
+              onToggle={(id) => {
+                updateSession(prev => ({
+                  ...prev,
+                  checklist: {
+                    ...prev.checklist,
+                    [id]: { ...prev.checklist[id], status: 'DONE' }
+                  }
+                }));
+              }}
+            />
 
-                     if (!ptData) return defaultData;
-
-                     // 데이터 구조 검증 및 병합
-                     return {
-                       performed: ptData.performed ?? false,
-                       test_date: ptData.test_date ?? null,
-                       transducer: ptData.transducer ?? null,
-                       ac_dbhl: {
-                         right: ptData.ac_dbhl?.right ?? {},
-                         left: ptData.ac_dbhl?.left ?? {}
-                       },
-                       sf_dbhl: {
-                         right: ptData.sf_dbhl?.right ?? {},
-                         left: ptData.sf_dbhl?.left ?? {}
-                       },
-                       bc_dbhl: {
-                         right: ptData.bc_dbhl?.right ?? {},
-                         left: ptData.bc_dbhl?.left ?? {}
-                       },
-                       nr: {
-                         right: ptData.nr?.right ?? [],
-                         left: ptData.nr?.left ?? [],
-                         sf_right: ptData.nr?.sf_right ?? [],
-                         sf_left: ptData.nr?.sf_left ?? []
-                       },
-                       masking_used: ptData.masking_used ?? null,
-                       notes: ptData.notes ?? null,
-                       derived: {
-                         pta_right: ptData.derived?.pta_right ?? null,
-                         pta_left: ptData.derived?.pta_left ?? null,
-                         pta_sf_right: ptData.derived?.pta_sf_right ?? null,
-                         pta_sf_left: ptData.derived?.pta_sf_left ?? null
-                       }
-                     };
-                   })()}
-                   onChange={(d) => updateSession(prev => ({...prev, results_detailed: {...prev.results_detailed, pure_tone: d}}))}
-                 />
-               </div>
-            </div>
-
+            <details className="mt-6 group" open>
+              <summary className="cursor-pointer text-sm font-semibold text-slate-600 hover:text-slate-900 py-2">
+                전체 체크항목 보기 ({template.length}개)
+              </summary>
+              <div className="mt-3">
             <div className="space-y-6">
                {['문진/상담', '귀/중이', '청각검사', '피팅/검증', '기기점검', '교육', '계획', '조정', '결과평가'].map(section => {
                  const sectionItems = template.filter(i => i.section === section);
@@ -4746,6 +4697,8 @@ const HaProtocolTab: React.FC<Props> = ({ visit, customer, onSave, onDirtyChange
                  );
                })}
             </div>
+              </div>
+            </details>
         </div>
       </div>
 

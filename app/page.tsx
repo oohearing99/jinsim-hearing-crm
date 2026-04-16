@@ -6,6 +6,9 @@ import { BRAND_ID, CENTER_ID, COUNSELOR_NAME } from '@/constants';
 import CustomerSearch from '@/components/CustomerSearch';
 import CustomerDetail from '@/components/CustomerDetail';
 import VisitManager, { VisitManagerHandle } from '@/components/VisitManager';
+import { VisitPurposeModal, type NewVisitPayload } from '../components/visit/VisitPurposeModal';
+import { migrateVisitsV3 } from '../lib/migrations/visit-purpose';
+import { formatVisitPurpose } from '../utils/visitPurposeLabel';
 import { Search, User, ClipboardList, UserCheck, MapPin, X, FileSpreadsheet, Settings, CheckCircle2, AlertCircle, Download, Upload, Database, Camera, FileEdit } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { downloadBackup, validateBackupFile, restoreBackup, getBackupStats, saveLastBackupTime, shouldRemindBackup } from '@/utils/backupUtils';
@@ -16,6 +19,10 @@ export default function Home() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
   const [isCreatingVisit, setIsCreatingVisit] = useState(false);
+  const [selectedVisitType, setSelectedVisitType] = useState<VisitType | null>(null);
+  const [selectedHaStage, setSelectedHaStage] = useState<HAStage | null>(null);
+  const [visitMemo, setVisitMemo] = useState('');
+  const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -55,8 +62,20 @@ export default function Home() {
 
   const [visits, setVisits] = useState<Visit[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('jinsim_visits');
-      return saved ? JSON.parse(saved) : [];
+      const raw = JSON.parse(localStorage.getItem('jinsim_visits') ?? '[]') as Visit[];
+      const questionnaires = JSON.parse(localStorage.getItem('jinsim_questionnaires') ?? '[]');
+      const audiograms = JSON.parse(localStorage.getItem('jinsim_audiograms') ?? '[]');
+      const qMap = new Map<string, boolean>(questionnaires.map((q: any) => [q.visit_id, true]));
+      const aMap = new Map<string, boolean>(audiograms.map((a: any) => [a.visit_id, true]));
+      const savedCustomers = JSON.parse(localStorage.getItem('jinsim_customers') ?? '[]');
+      const hexpMap = new Map<string, boolean>(savedCustomers.map((c: any) => [c.id, c.hearing_aid_experience === 'Y']));
+      const migrated = migrateVisitsV3(raw, {
+        questionnairesByVisit: qMap,
+        audiogramsByVisit: aMap,
+        hearingAidExperienceByCustomer: hexpMap,
+      });
+      if (migrated !== raw) localStorage.setItem('jinsim_visits', JSON.stringify(migrated));
+      return migrated;
     }
     return [];
   });
@@ -186,6 +205,14 @@ export default function Home() {
     showToast('고객 정보가 수정되었습니다.');
   };
 
+  const handleOpenCreateVisit = () => {
+    setSelectedVisitType(null);
+    setSelectedHaStage(null);
+    setVisitMemo('');
+    setVisitDate(new Date().toISOString().split('T')[0]);
+    setIsCreatingVisit(true);
+  };
+
   const handleFinalizeVisitCreate = (type: VisitType, stage: HAStage | null) => {
     if (!selectedCustomer) return;
 
@@ -198,14 +225,15 @@ export default function Home() {
 
     const nextRule = stage === 'HA_1' || stage === 'HA_2' ? 'WEEKLY' : '3MONTH';
     const nextDays = nextRule === 'WEEKLY' ? 7 : 90;
-    const nextDate = new Date();
+    const nextDate = new Date(visitDate);
     nextDate.setDate(nextDate.getDate() + nextDays);
 
     const newVisit: Visit = {
       id: Math.random().toString(36).substr(2, 9),
       customer_id: selectedCustomer.id,
-      visit_date: new Date().toISOString().split('T')[0],
+      visit_date: visitDate,
       purpose: stage ? [stageLabels[stage]] : ['일반 상담'],
+      visit_memo: visitMemo || undefined,
       visit_type: type,
       ha_stage: stage,
       ha_stage_label: stage ? stageLabels[stage] : undefined,
@@ -217,7 +245,12 @@ export default function Home() {
       counselor_name: prefCounselor,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      visit_purpose: type === 'HA_PROTOCOL' && stage
+        ? (stage === 'AFTERCARE_3MO' ? 'AFTERCARE' : 'FITTING')
+        : 'INITIAL',
+      visit_motives: [],
     };
+
     setVisits(prev => [...prev, newVisit]);
     setIsCreatingVisit(false);
     handleSelectVisit(newVisit);
@@ -256,7 +289,7 @@ export default function Home() {
           '상담자': v.counselor_name,
           '센터': v.center_id,
           '방문유형': v.visit_type === 'GENERAL' ? '일반상담' : 'HA프로토콜',
-          '방문단계': v.ha_stage_label || '일반상담',
+          '방문단계': formatVisitPurpose(v) ?? v.ha_stage_label ?? '일반상담',
           '방문목적': v.purpose?.join(', ') || '-',
           '방문메모': v.memo || '-',
         };
@@ -717,7 +750,7 @@ export default function Home() {
         <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
           <div className="max-w-7xl mx-auto">
             {view === AppState.SEARCH && <CustomerSearch customers={customers} onSelect={handleSelectCustomer} onCreate={handleCreateCustomer} />}
-            {view === AppState.CUSTOMER_DETAIL && selectedCustomer && (<CustomerDetail customer={selectedCustomer} visits={visits.filter(v => v.customer_id === selectedCustomer.id)} onSelectVisit={handleSelectVisit} onCreateVisit={() => setIsCreatingVisit(true)} onUpdateCustomer={handleUpdateCustomer} />)}
+            {view === AppState.CUSTOMER_DETAIL && selectedCustomer && (<CustomerDetail customer={selectedCustomer} visits={visits.filter(v => v.customer_id === selectedCustomer.id)} onSelectVisit={handleSelectVisit} onCreateVisit={handleOpenCreateVisit} onUpdateCustomer={handleUpdateCustomer} />)}
             {view === AppState.VISIT_DETAIL && selectedVisit && selectedCustomer && (<VisitManager ref={visitManagerRef} visit={selectedVisit} customer={selectedCustomer} onSaveSuccess={(msg) => { showToast(msg); setIsDirty(false); }} onDirtyChange={setIsDirty} saveTriggerRef={saveTriggerRef} />)}
           </div>
         </div>
@@ -757,16 +790,32 @@ export default function Home() {
         </div>
       )}
 
-      {isCreatingVisit && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in duration-300">
-            <div className="p-8 bg-slate-50 border-b flex justify-between items-center"><h3 className="text-2xl font-black tracking-tight">방문 유형 선택</h3><button onClick={() => setIsCreatingVisit(false)} className="p-2 hover:bg-white rounded-full transition-all"><X className="w-6 h-6 text-slate-400" /></button></div>
-            <div className="p-8 space-y-4">
-               <button onClick={() => handleFinalizeVisitCreate('GENERAL', null)} className="w-full p-6 border-2 border-slate-100 rounded-[2rem] text-left hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center gap-5 group shadow-sm hover:shadow-lg"><div className="bg-blue-100 p-4 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all shadow-md"><Search className="w-7 h-7" /></div><div><p className="font-black text-lg text-slate-800">일반 상담 / 청력 검사</p><p className="text-xs font-bold text-slate-500 mt-1">기초 문진 및 모든 임상 평가 포함</p></div></button>
-               <div className="pt-4"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-3 border-l-4 border-orange-500">HA Protocol</p><div className="grid grid-cols-1 gap-3">{[{ id: 'HA_1', label: '1차(기초평가/첫 착용)' },{ id: 'HA_2', label: '2차(1주 후 적응체크)' },{ id: 'HA_3', label: '3차(2주 후 심화조정)' },{ id: 'AFTERCARE_3MO', label: '사후관리(3개월 점검)' }].map(st => (<button key={st.id} onClick={() => handleFinalizeVisitCreate('HA_PROTOCOL', st.id as HAStage)} className="w-full p-4 border-2 border-slate-50 rounded-2xl text-left hover:border-orange-500 hover:bg-orange-50 transition-all flex items-center gap-4 group"><div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-black shadow-sm group-hover:bg-orange-600 group-hover:text-white transition-all">{st.id.split('_').pop()}</div><p className="text-sm font-black text-slate-700">{st.label}</p></button>))}</div></div>
-            </div>
-          </div>
-        </div>
+      {isCreatingVisit && selectedCustomer && (
+        <VisitPurposeModal
+          customerId={selectedCustomer.id}
+          existingPurchaseCycles={
+            Array.from(new Set(
+              visits
+                .filter(v => v.customer_id === selectedCustomer.id && v.purchase_cycle_id)
+                .map(v => v.purchase_cycle_id!)
+            ))
+          }
+          onSubmit={(payload: NewVisitPayload) => {
+            const newVisit: Visit = {
+              id: crypto.randomUUID(),
+              brand_id: BRAND_ID,
+              center_id: prefCenter,
+              counselor_name: prefCounselor,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              ...payload,
+            } as Visit;
+            setVisits(prev => [...prev, newVisit]);
+            setIsCreatingVisit(false);
+            handleSelectVisit(newVisit);
+          }}
+          onCancel={() => setIsCreatingVisit(false)}
+        />
       )}
 
       {/* 백업 모달 */}

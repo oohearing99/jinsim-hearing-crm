@@ -1,0 +1,130 @@
+goal: >
+  진심히어링 CRM의 "새 상담/프로토콜 시작" 카테고리를 2축(방문 목적 × 단계) 기반
+  구조로 재설계하되, 인터뷰에서 발견된 7가지 구조적 누락(SERVICE 과포화,
+  청력재검 귀속, AFTERCARE 단일 템플릿, purpose[] 중복, 마이그레이션 휴리스틱,
+  복수 목적 방문, 재구매 사이클)을 모두 반영한 스펙으로 확장한다.
+
+context:
+  deployed_url: https://jinsim-hearing-2h2a4tjy9-jaehoons-projects-9f86cd1a.vercel.app/
+  base_design: docs/superpowers/specs/2026-04-14-visit-purpose-redesign-design.md
+  interview_date: 2026-04-15
+  interview_mode: path_b_plugin_fallback
+
+constraints:
+  - Next.js + React + TypeScript (기존 스택 유지)
+  - localStorage 기반 영속성 (jinsim_visits 키)
+  - 기존 Visit 데이터 비파괴 마이그레이션 (deprecated 필드 보존)
+  - MIGRATION_VERSION 증가로 1회성 실행
+  - 외부 DB/백엔드 추가 없음
+  - Vercel 배포 환경 호환
+
+ontology_schema:
+  name: VisitPurposeDomain
+  description: 방문 목적 × 단계 × 구매 사이클 3차원 모델
+  fields:
+    - name: visit_purpose
+      type: enum
+      values: [INITIAL, FITTING, AFTERCARE, SERVICE, REFUND_EXCHANGE]
+      description: 최상위 방문 목적 (5개, REFUND_EXCHANGE 신규 분리)
+    - name: fitting_session_no
+      type: integer?
+      description: FITTING 시 회차 (구매 사이클 내)
+    - name: aftercare_bucket
+      type: enum?
+      values: [M3, M6, M12, LONGTERM]
+      description: AFTERCARE 분기 (4구간, 기존 단일 템플릿 대체)
+    - name: purchase_cycle_id
+      type: string?
+      description: 재구매 사이클 식별자 (신규, fitting_session_no 리셋 기준)
+    - name: visit_motives
+      type: string[]
+      description: 보조 동기 (purpose[]는 제거)
+    - name: primary_purpose_memo
+      type: string?
+      description: 복수 목적 방문 시 부차 목적 기록 (단일 primary 선언 원칙)
+
+acceptance_criteria:
+  - 5개 최상위 카테고리(INITIAL/FITTING/AFTERCARE/SERVICE/REFUND_EXCHANGE) UI 노출
+  - AFTERCARE 방문 시 3M/6M/12M/LONGTERM 4개 템플릿 중 자동 라우팅
+  - 12M AFTERCARE 템플릿에 청력재검 항목 필수 포함
+  - 기존 착용자 청력재검 → AFTERCARE, 비착용자 → SERVICE 분기 동작
+  - purpose[] 필드 제거 후 visit_motives로 통합, 기존 데이터 무손실 이전
+  - 마이그레이션 시 audiogram/문진표 신호 기반 INITIAL 판정 (단순 "첫 방문=INITIAL" 금지)
+  - FITTING 방문에 "신규 구매 사이클" 토글 제공, 토글 시 purchase_cycle_id 발급 + session_no=1 리셋
+  - 복수 목적 방문 시 primary 1개 강제, 나머지는 memo로 기록
+  - 기존 Visit 레코드 전부 신 스키마로 마이그레이션 후에도 기존 UI 정상 렌더
+  - MIGRATION_VERSION 3으로 증가, 재실행 방지
+
+evaluation_principles:
+  - name: 운영 분석 가능성
+    weight: 0.25
+    description: REFUND_EXCHANGE 분리 및 AFTERCARE 세분화로 카테고리별 집계 가능
+  - name: 데이터 무결성
+    weight: 0.25
+    description: deprecated 필드 보존 + 신호 기반 마이그레이션으로 오분류 최소화
+  - name: 임상 정확성
+    weight: 0.20
+    description: 청력재검 귀속 규칙, 12M 필수 재검 등 임상 프로토콜 준수
+  - name: UX 단순성
+    weight: 0.15
+    description: primary 1개 + memo 패턴으로 복수 목적 UI 혼란 방지
+  - name: 확장성
+    weight: 0.15
+    description: purchase_cycle_id로 재구매 고객 장기 추적 가능
+
+seven_gap_resolutions:
+  - id: G1
+    gap: SERVICE 카테고리 과포화 (반품/교환/수리/조정/점검 혼재)
+    decision: REFUND_EXCHANGE를 5번째 최상위로 분리, 나머지는 SERVICE 유지
+    design_sections: ["§2.1", "§6.1"]
+  - id: G2
+    gap: 청력재검 귀속 모호 ("AFTERCARE로도 분류 가능")
+    decision: 기존 착용자=AFTERCARE, 비착용자=SERVICE, 12M 재검 필수
+    design_sections: ["§2.1", "§4.3.3"]
+  - id: G3
+    gap: AFTERCARE 단일 템플릿 (3M/12M/24M+ 동일)
+    decision: 3M/6M/12M/LONGTERM 4구간 분기, 템플릿 11개로 확장
+    design_sections: ["§4.1", "§4.2", "§4.3"]
+  - id: G4
+    gap: purpose[] vs visit_motives 중복
+    decision: purpose[] 제거, visit_motives 단일 필드 유지
+    design_sections: ["§3.1", "§6.3"]
+  - id: G5
+    gap: 마이그레이션 휴리스틱 ("첫 방문=INITIAL") 오분류 위험
+    decision: audiogram/문진표 존재 여부 등 신호 기반 INITIAL 판정
+    design_sections: ["§5.1", "§5.2"]
+  - id: G6
+    gap: 복수 목적 방문 미정의
+    decision: primary 1개 강제 선언 + 나머지는 memo 기록
+    design_sections: [신규 §2.4]
+  - id: G7
+    gap: 재구매 사이클 시 fitting_session_no 누적 문제
+    decision: purchase_cycle_id 도입, 사이클별 session_no 독립 관리
+    design_sections: ["§3.1", "§5", "§6.1"]
+
+exit_conditions:
+  - 5개 최상위 카테고리 UI + 11개 AFTERCARE 포함 템플릿이 모두 배포됨
+  - 기존 localStorage 데이터 신 스키마로 전환 완료 후 1주일 오류 보고 없음
+  - 반품/교환 별도 집계 리포트가 대시보드에 노출됨
+  - 재구매 고객 2인 이상 purchase_cycle_id 정상 발급 검증
+
+unresolved_minor_axes:
+  - deprecated 필드(visit_type, ha_stage, ha_stage_label) 물리적 제거 시점
+  - 다중 기기(브라우저) 간 localStorage 일관성 보장 방안
+
+affected_components:
+  - app/page.tsx
+  - components/HaProtocolTab.tsx
+  - components/TopPriorityPanel.tsx
+  - components/JourneyDashboard.tsx
+  - components/CustomerDetail.tsx
+  - lib/migrations/visit-purpose.ts (신규)
+  - lib/templates/aftercare.ts (4구간 분기)
+
+metadata:
+  version: 0.2.0
+  created_at: 2026-04-15
+  ambiguity_score: 0.18
+  interview_mode: socratic_7q_path_b
+  base_spec_version: 2026-04-14-visit-purpose-redesign-design.md
+  migration_version: 3

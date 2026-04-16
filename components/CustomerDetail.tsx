@@ -2,6 +2,8 @@
 import React, { useMemo, useState } from 'react';
 import { Customer, Visit } from '../types';
 import { Calendar, Plus, ChevronRight, FileText, Clock, Headphones, CheckCircle2, Layers, X, FileEdit } from 'lucide-react';
+import { JourneyDashboard } from './journey/JourneyDashboard';
+import { formatVisitPurpose } from '../utils/visitPurposeLabel';
 
 interface Props {
   customer: Customer;
@@ -45,9 +47,9 @@ const CustomerDetail: React.FC<Props> = ({ customer, visits, onSelectVisit, onCr
         groups.set(groupKey, {
           key: groupKey,
           date: visit.visit_date,
-          visitType: visit.visit_type,
-          haStage: visit.ha_stage,
-          haStageLabel: visit.ha_stage_label || null,
+          visitType: visit.visit_type ?? 'GENERAL',
+          haStage: visit.ha_stage ?? null,
+          haStageLabel: formatVisitPurpose(visit) ?? visit.ha_stage_label ?? null,
           visits: [visit],
           latestVisit: visit
         });
@@ -107,6 +109,10 @@ const CustomerDetail: React.FC<Props> = ({ customer, visits, onSelectVisit, onCr
         </div>
       </div>
 
+      <div className="mt-6">
+        <JourneyDashboard visits={visits.map(v => ({ ...v, visit_type: v.visit_type ?? 'GENERAL' as const }))} />
+      </div>
+
       <div className="space-y-4">
         <h4 className="text-lg font-bold flex items-center gap-2"><Clock className="w-5 h-5 text-slate-400" />방문 타임라인</h4>
         <div className="grid grid-cols-1 gap-4">
@@ -136,7 +142,7 @@ const CustomerDetail: React.FC<Props> = ({ customer, visits, onSelectVisit, onCr
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-500">{group.latestVisit.counselor_name} 상담사 | {group.latestVisit.purpose.join(', ')}</p>
+                  <p className="text-sm text-slate-500">{group.latestVisit.counselor_name} 상담사 | {(group.latestVisit.purpose ?? []).join(', ')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">

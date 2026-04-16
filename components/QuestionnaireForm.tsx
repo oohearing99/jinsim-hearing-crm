@@ -1,3 +1,4 @@
+// DEPRECATED: superseded by components/wizard/QuestionnaireWizard.tsx (Phase 1). Delete after QA.
 
 import React, { useState, useEffect } from 'react';
 import { Visit, Customer, QuestionnaireData, CosiGoal } from '../types';
